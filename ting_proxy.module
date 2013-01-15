@@ -136,16 +136,20 @@ function ting_proxy_hostname_element_validate($element, &$form_state) {
 }
 
 /**
- * Implementation of hook_ting_online_url_alter().
+ * Alter the url for online resources.
+ *
+ * Rewrite the url so it is accesed to users not having direct access
+ * to the resource.
  */
-function ting_proxy_ting_online_url_alter(&$url) {
-  $configuration = variable_get('ting_proxy', array());
-
+function ting_proxy_ting_online_url_alter($url) {
+  $proxy = variable_get('ting_proxy', array());
+  $new_url = $url;
   //Alter the url if we have a valid proxy configuration
-  if (isset($proxy['prefix']) && $proxy['prefix'] &&
-      isset($proxy['hostnames']) && is_array($proxy['hostnames'])) {
-    $url = ting_proxy_rewrite_download_url($url, $proxy['prefix'], $proxy['hostnames']);
+  if (!empty($proxy['prefix']) && is_array($proxy['hostnames'])) {
+    $new_url = ting_proxy_rewrite_download_url($url, $proxy['prefix'], $proxy['hostnames']);
   }
+
+  return $new_url;
 }
 
 /**
@@ -167,7 +171,7 @@ function ting_proxy_rewrite_download_url($url, $proxy_url, $hostnames_config) {
 
   // Search hostnames (can this be optimized ? yes - save data in other format)
   foreach ($hostnames_config as $config) {
-    if ($host == $config['hostname']) {
+    if (preg_match('/' . $config['hostname'] . '/', $host)) {
       // Rewrite/convert url using regex
       if ((isset($config['expression']['regex']) && !empty($config['expression']['regex'])) &&
           (isset($config['expression']['replacement']) && !empty($config['expression']['replacement']))) {
